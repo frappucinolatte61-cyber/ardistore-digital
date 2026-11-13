@@ -176,3 +176,77 @@ export const verifyAdminLogin = async (inputUser, inputPassword) => {
 
   return { success: false };
 };
+
+// Upload media file (Image or Video) to Supabase Storage with local fallback
+export const uploadProductMedia = async (file, folder = 'images') => {
+  if (!file) throw new Error('File tidak ditemukan');
+
+  const supabase = getSupabaseClient();
+  const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : (file.type?.startsWith('video') ? 'mp4' : 'jpg');
+  const safeName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+
+  // 1. If Supabase is connected, attempt upload to 'product-media' bucket
+  if (supabase && supabase.storage) {
+    try {
+      const { data, error } = await supabase.storage
+        .from('product-media')
+        .upload(safeName, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type || undefined,
+        });
+
+      if (!error && data) {
+        const { data: publicData } = supabase.storage
+          .from('product-media')
+          .getPublicUrl(safeName);
+
+        if (publicData && publicData.publicUrl) {
+          return {
+            success: true,
+            url: publicData.publicUrl,
+            source: 'supabase_storage',
+          };
+        }
+      } else if (error) {
+        console.warn('Supabase storage upload error:', error);
+      }
+    } catch (err) {
+      console.warn('Supabase storage upload exception:', err);
+    }
+  }
+
+  // 2. Fallback for images: convert to base64 Data URL
+  if (file.type && file.type.startsWith('image/')) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          success: true,
+          url: reader.result,
+          source: 'local_data_url',
+        });
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 3. Fallback for videos: convert to Data URL if under 15MB
+  if (file.type && file.type.startsWith('video/') && file.size < 15 * 1024 * 1024) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          success: true,
+          url: reader.result,
+          source: 'local_data_url',
+        });
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  throw new Error('Gagal mengunggah file. Pastikan bucket "product-media" sudah dibuat di Supabase.');
+};

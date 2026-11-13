@@ -3,13 +3,14 @@ import {
   X, Plus, Trash2, Edit3, Save, Database, LogOut, Check, 
   AlertCircle, Sparkles, RefreshCw, Eye, EyeOff, Search, Layers, 
   HelpCircle, Package, ArrowLeft, KeyRound, Shield, User, Lock, UserCheck,
-  Play, Video, Camera
+  Play, Video, Camera, UploadCloud, Upload, Film, Trash
 } from 'lucide-react';
 import { 
   getSupabaseClient, 
   getAdminCredentials, 
   updateAdminCredentials, 
-  verifyAdminLogin 
+  verifyAdminLogin,
+  uploadProductMedia
 } from '../lib/supabaseClient';
 import { CATEGORIES } from '../data/defaultProducts';
 
@@ -91,6 +92,12 @@ export default function AdminCRM({
   const [accountSaveStatus, setAccountSaveStatus] = useState('');
   const [isSavingAccount, setIsSavingAccount] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  // Upload Loading States
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [uploadFeedback, setUploadFeedback] = useState('');
 
   // Anti Brute-Force Rate Limiting State
   const [failedAttempts, setFailedAttempts] = useState(() => {
@@ -312,6 +319,87 @@ export default function AdminCRM({
     onSaveProduct(productPayload);
     setActiveProductTab('list');
     setEditingProductId(null);
+  };
+
+  // --- MEDIA UPLOAD HANDLERS ---
+  const handleUploadMainImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    setUploadFeedback('');
+    try {
+      const res = await uploadProductMedia(file, 'images');
+      setProductFormData((prev) => ({ ...prev, image: res.url }));
+      setUploadFeedback('✅ Foto utama berhasil diunggah!');
+      setTimeout(() => setUploadFeedback(''), 3000);
+    } catch (err) {
+      alert('Gagal mengunggah foto: ' + (err.message || 'Error'));
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadVideo = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 100 * 1024 * 1024) {
+      alert('Ukuran video maksimal 100 MB!');
+      return;
+    }
+
+    setIsUploadingVideo(true);
+    setUploadFeedback('');
+    try {
+      const res = await uploadProductMedia(file, 'videos');
+      setProductFormData((prev) => ({ ...prev, videoUrl: res.url }));
+      setUploadFeedback('✅ Video berhasil diunggah!');
+      setTimeout(() => setUploadFeedback(''), 3000);
+    } catch (err) {
+      alert('Gagal mengunggah video: ' + (err.message || 'Error'));
+    } finally {
+      setIsUploadingVideo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadGalleryImages = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setIsUploadingGallery(true);
+    setUploadFeedback('');
+    try {
+      const uploadedUrls = [];
+      for (const file of files) {
+        const res = await uploadProductMedia(file, 'gallery');
+        if (res.url) uploadedUrls.push(res.url);
+      }
+
+      setProductFormData((prev) => {
+        const existingLines = prev.galleryText ? prev.galleryText.split('\n').filter(Boolean) : [];
+        const merged = [...existingLines, ...uploadedUrls].join('\n');
+        return { ...prev, galleryText: merged };
+      });
+
+      setUploadFeedback(`✅ Berhasil mengunggah ${uploadedUrls.length} foto ke galeri!`);
+      setTimeout(() => setUploadFeedback(''), 3000);
+    } catch (err) {
+      alert('Gagal mengunggah foto galeri: ' + (err.message || 'Error'));
+    } finally {
+      setIsUploadingGallery(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveGalleryImage = (indexToRemove) => {
+    setProductFormData((prev) => {
+      const lines = prev.galleryText ? prev.galleryText.split('\n').filter(Boolean) : [];
+      const updated = lines.filter((_, idx) => idx !== indexToRemove);
+      return { ...prev, galleryText: updated.join('\n') };
+    });
   };
 
   // --- FAQ HANDLERS ---
@@ -845,66 +933,136 @@ export default function AdminCRM({
                           </div>
                         </div>
 
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
-                            <span>URL Gambar Utama (Cover/Thumbnail):</span>
-                            <span className="text-[10px] text-cyan-400">Wajib diisi</span>
-                          </label>
-                          <div className="flex gap-2">
+                        {/* UPLOAD FEEDBACK NOTIFICATION */}
+                        {uploadFeedback && (
+                          <div className="p-3 bg-emerald-950/70 border border-emerald-800 rounded-xl text-xs text-emerald-300 flex items-center space-x-2">
+                            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>{uploadFeedback}</span>
+                          </div>
+                        )}
+
+                        {/* 1. FOTO UTAMA DENGAN UPLOAD LANGSUNG */}
+                        <div className="space-y-2.5 p-4 bg-slate-900/60 rounded-2xl border border-slate-800">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <label className="text-xs font-semibold text-slate-200 flex items-center space-x-1.5">
+                              <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Foto Utama Produk (Cover/Thumbnail):</span>
+                            </label>
+                            <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all shrink-0">
+                              {isUploadingImage ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                              <span>{isUploadingImage ? 'Mengunggah Foto...' : 'Upload Foto (HP / PC)'}</span>
+                              <input type="file" accept="image/*" onChange={handleUploadMainImage} className="hidden" disabled={isUploadingImage} />
+                            </label>
+                          </div>
+                          
+                          <div className="flex gap-2 items-center">
                             <input
-                              type="url"
+                              type="text"
                               value={productFormData.image}
                               onChange={(e) => setProductFormData({ ...productFormData, image: e.target.value })}
-                              placeholder="https://images.unsplash.com/photo-..."
-                              className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                              placeholder="Atau tempel URL gambar: https://images.unsplash.com/..."
+                              className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                              required
                             />
                             {productFormData.image && (
-                              <div className="w-12 h-10 rounded-lg overflow-hidden border border-slate-700 shrink-0">
+                              <div className="relative w-14 h-11 rounded-lg overflow-hidden border border-slate-700 shrink-0 group">
                                 <img src={productFormData.image} alt="Preview" className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => setProductFormData({ ...productFormData, image: '' })}
+                                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-rose-400 transition-opacity"
+                                  title="Hapus foto"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
                             )}
                           </div>
-                        </div>
-
-                        {/* NEW: Video URL Field */}
-                        <div className="p-3.5 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
-                          <label className="block text-xs font-semibold text-slate-200 flex items-center justify-between">
-                            <span className="flex items-center space-x-1.5">
-                              <Play className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-                              <span>Link Video Demo / Tutorial (Opsional):</span>
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-normal">YouTube / Shorts / MP4</span>
-                          </label>
-                          <input
-                            type="url"
-                            value={productFormData.videoUrl}
-                            onChange={(e) => setProductFormData({ ...productFormData, videoUrl: e.target.value })}
-                            placeholder="Contoh: https://www.youtube.com/watch?v=... atau https://youtu.be/..."
-                            className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
-                          />
                           <p className="text-[11px] text-slate-400">
-                            Video akan langsung diputar saat calon pembeli membuka rincian produk. Mendukung link YouTube reguler, YouTube Shorts, link MP4 langsung, dan Google Drive preview.
+                            Pilih file gambar langsung dari galeri HP / laptop Anda, atau tempel link URL foto online.
                           </p>
                         </div>
 
-                        {/* NEW: Extra Gallery Images */}
-                        <div className="p-3.5 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
-                          <label className="block text-xs font-semibold text-slate-200 flex items-center justify-between">
-                            <span className="flex items-center space-x-1.5">
-                              <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                        {/* 2. VIDEO DEMO DENGAN UPLOAD LANGSUNG (MP4 / YOUTUBE) */}
+                        <div className="space-y-2.5 p-4 bg-slate-900/60 rounded-2xl border border-slate-800">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <label className="text-xs font-semibold text-slate-200 flex items-center space-x-1.5">
+                              <Play className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
+                              <span>Video Demo / Tutorial (Opsional):</span>
+                            </label>
+                            <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition-all shrink-0">
+                              {isUploadingVideo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Film className="w-3.5 h-3.5" />}
+                              <span>{isUploadingVideo ? 'Mengunggah Video...' : 'Upload Video (MP4 / WebM)'}</span>
+                              <input type="file" accept="video/mp4,video/webm,video/quicktime,video/*" onChange={handleUploadVideo} className="hidden" disabled={isUploadingVideo} />
+                            </label>
+                          </div>
+
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={productFormData.videoUrl}
+                              onChange={(e) => setProductFormData({ ...productFormData, videoUrl: e.target.value })}
+                              placeholder="Atau tempel link YouTube/Shorts: https://www.youtube.com/watch?v=..."
+                              className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-cyan-400 font-mono"
+                            />
+                            {productFormData.videoUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setProductFormData({ ...productFormData, videoUrl: '' })}
+                                className="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-slate-700 transition-colors"
+                                title="Hapus video"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400">
+                            Bisa upload file video langsung dari HP/komputer (MP4/WebM) atau masukkan link video dari YouTube &amp; YouTube Shorts.
+                          </p>
+                        </div>
+
+                        {/* 3. GALERI FOTO TAMBAHAN DENGAN MULTI-UPLOAD */}
+                        <div className="space-y-2.5 p-4 bg-slate-900/60 rounded-2xl border border-slate-800">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <label className="text-xs font-semibold text-slate-200 flex items-center space-x-1.5">
+                              <Camera className="w-3.5 h-3.5 text-purple-400" />
                               <span>Galeri Foto Tambahan (Opsional):</span>
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-normal">1 baris = 1 URL foto</span>
-                          </label>
+                            </label>
+                            <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all shrink-0">
+                              {isUploadingGallery ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                              <span>{isUploadingGallery ? 'Mengunggah Foto...' : 'Upload Banyak Foto Sekaligus'}</span>
+                              <input type="file" accept="image/*" multiple onChange={handleUploadGalleryImages} className="hidden" disabled={isUploadingGallery} />
+                            </label>
+                          </div>
+
+                          {/* Gallery Thumbnails List */}
+                          {productFormData.galleryText && productFormData.galleryText.split('\n').filter(Boolean).length > 0 && (
+                            <div className="flex items-center space-x-2.5 overflow-x-auto py-2">
+                              {productFormData.galleryText.split('\n').filter(Boolean).map((url, gIdx) => (
+                                <div key={gIdx} className="relative w-16 h-12 rounded-lg overflow-hidden border border-slate-700 shrink-0 group">
+                                  <img src={url} alt={`Galeri ${gIdx + 1}`} className="w-full h-full object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveGalleryImage(gIdx)}
+                                    className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex items-center justify-center text-rose-400 transition-opacity"
+                                    title="Hapus foto ini"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           <textarea
                             rows={2}
                             value={productFormData.galleryText}
                             onChange={(e) => setProductFormData({ ...productFormData, galleryText: e.target.value })}
-                            placeholder="https://images.unsplash.com/photo-1...&#10;https://images.unsplash.com/photo-2..."
+                            placeholder="Atau tempel daftar URL gambar (1 baris 1 URL):&#10;https://images.unsplash.com/photo-1...&#10;https://images.unsplash.com/photo-2..."
                             className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-cyan-400 font-mono"
                           />
                           <p className="text-[11px] text-slate-400">
-                            Foto tambahan akan ditampilkan dalam bentuk galeri slider / thumbnail di samping foto utama.
+                            Foto-foto ini akan muncul sebagai slider &amp; thumbnail saat pembeli membuka rincian produk.
                           </p>
                         </div>
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { MessageCircle, ShieldCheck, Heart, Lock, Database } from 'lucide-react';
 import { DEFAULT_WHATSAPP } from '../data/defaultProducts';
 
-export default function Footer({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseConnected, onSelectCategory }) {
+export default function Footer({ onOpenAdmin, onSelectCategory }) {
   const handleCategoryClick = (catId) => {
     if (onSelectCategory) {
       onSelectCategory(catId);
@@ -132,19 +132,11 @@ export default function Footer({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseCo
 
           <div className="flex items-center space-x-4">
             <button
-              onClick={onOpenSupabaseConfig}
-              className="hover:text-emerald-400 transition-colors flex items-center space-x-1 text-[11px]"
-            >
-              <Database className="w-3 h-3 text-emerald-500" />
-              <span>{isSupabaseConnected ? 'Database: Supabase Aktif' : 'Database: Offline'}</span>
-            </button>
-
-            <button
               onClick={onOpenAdmin}
-              className="hover:text-cyan-400 transition-colors flex items-center space-x-1 text-[11px]"
+              className="hover:text-cyan-400 transition-colors flex items-center space-x-1.5 text-[11px] text-slate-500 hover:text-slate-300"
             >
-              <Lock className="w-3 h-3 text-cyan-500" />
-              <span>Portal CRM Admin</span>
+              <Lock className="w-3.5 h-3.5 text-slate-500" />
+              <span>Portal Admin</span>
             </button>
           </div>
         </div>

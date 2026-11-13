@@ -27,14 +27,14 @@ Platform Landing Page responsif, modern, dan berkecepatan tinggi untuk **Ardisto
      - *Followers Threads by Instagram*
      - *Nomor Virtual WA Luar Negeri (Jasa OTP)*
      - *Followers & Review Marketplace (Shopee / Tokopedia)*
-- **Integrasi WhatsApp Otomatis (`08980503699`)**:
+- **Integrasi WhatsApp Otomatis**:
   - Tombol order langsung menyusun format pesan rapi (Nama Produk, Kategori, Harga, Jumlah, Catatan Pembeli).
 - **Search & Filter Real-Time**: Pencarian instan dan tab kategori tanpa reload halaman.
 - **Modal Checkout Interaktif**: Pelanggan bisa menentukan jumlah pesanan (misal order 5 akun warlit) dan catatan khusus.
 - **FAQ & Trust Badges**: Panduan cara order dan metode pembayaran lengkap (QRIS, BCA, DANA, GoPay, OVO).
 
 ### 2. Admin CRM Panel
-- **Login Admin**: Mendukung autentikasi Supabase Auth atau Mode Demo Cepat (`admin@ardistore.digital` / `admin123`).
+- **Login Admin**: Mendukung autentikasi Supabase Auth atau password admin pribadi yang dapat diatur langsung di panel CRM.
 - **Manajemen Produk (CRUD)**:
   - Tambah produk baru beserta URL foto, badge, deskripsi, harga, satuan, dan bullet points keunggulan.
   - Edit produk yang sudah ada secara langsung.
@@ -115,13 +115,13 @@ docker run -d -p 80:80 --name ardistore-web ardistore-digital
 
 ---
 
-## 👤 Akun Admin Default (CRM Demo)
-- **Email**: `admin@ardistore.digital`
-- **Password**: `admin123`
-*(Bisa diganti atau dihubungkan ke tabel auth Supabase)*
+## 👤 Keamanan & Akses Akun Admin CRM
+- **Login Admin**: Masuk melalui tombol "Portal Admin" di footer halaman.
+- **Password Pribadi**: Anda dapat mengganti password admin langsung di dalam panel CRM melalui tombol **"Ganti Password"**.
+- **Supabase Auth**: Untuk keamanan tingkat lanjut, Anda juga dapat menghubungkan sistem autentikasi email & password resmi via Supabase Auth.
 
 ---
 
-## 📞 Kontak Hotline
-- **WhatsApp**: [08980503699](https://wa.me/628980503699)
+## 📞 Kontak Layanan
+- **WhatsApp**: Diarahkan otomatis ke nomor WhatsApp resmi CS melalui variabel lingkungan `VITE_WHATSAPP_NUMBER`.
 - **Owner**: Ardistore Digital

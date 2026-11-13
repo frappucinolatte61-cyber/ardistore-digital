@@ -261,9 +261,6 @@ export default function App() {
       {/* 1. Header */}
       <Header
         onOpenAdmin={() => setIsAdminOpen(true)}
-        onOpenSupabaseConfig={() => setIsSupabaseModalOpen(true)}
-        isSupabaseConnected={isSupabaseConnected}
-        productsCount={products.length}
       />
 
       <main className="flex-1">
@@ -435,8 +432,6 @@ export default function App() {
       {/* 7. Footer */}
       <Footer
         onOpenAdmin={() => setIsAdminOpen(true)}
-        onOpenSupabaseConfig={() => setIsSupabaseModalOpen(true)}
-        isSupabaseConnected={isSupabaseConnected}
         onSelectCategory={setActiveCategory}
       />
 

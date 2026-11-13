@@ -122,11 +122,7 @@ export default function AdminCRM({
     }
 
     setAuthLoading(false);
-    setAuthError(
-      import.meta.env.DEV
-        ? 'Email atau password salah! (Dev: admin@ardistore.digital / admin123)'
-        : 'Email atau password salah. Silakan periksa kembali kredensial Anda.'
-    );
+    setAuthError('Email atau password salah. Silakan periksa kembali kredensial Anda.');
   };
 
   const handleChangePassword = (e) => {
@@ -371,15 +367,10 @@ export default function AdminCRM({
                   </button>
 
                   <div className="mt-4 pt-4 border-t border-slate-800 text-center">
-                    {import.meta.env.DEV ? (
-                      <p className="text-[11px] text-slate-400">
-                        Mode Dev: <span className="text-cyan-400 font-mono">admin@ardistore.digital</span> | Pass: <span className="text-cyan-400 font-mono">admin123</span>
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-slate-500">
-                        🔒 Akses Terproteksi • Khusus Administrator Resmi Ardistore Digital
-                      </p>
-                    )}
+                    <p className="text-[11px] text-slate-500 flex items-center justify-center space-x-1.5">
+                      <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Portal Terproteksi • Khusus Administrator Resmi Ardistore Digital</span>
+                    </p>
                   </div>
                 </form>
               </div>
@@ -387,6 +378,22 @@ export default function AdminCRM({
           ) : (
             /* AUTHENTICATED ADMIN DASHBOARD */
             <div className="space-y-6">
+
+              {/* Security Alert if still using default password */}
+              {!localStorage.getItem('ardistore_admin_password') && (
+                <div className="p-3 bg-amber-950/40 border border-amber-800/80 rounded-xl text-xs text-amber-300 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>Perhatian: Anda belum mengganti password admin pribadi. Silakan buat password rahasia baru agar aman saat di-deploy.</span>
+                  </div>
+                  <button
+                    onClick={() => setShowPasswordModal(true)}
+                    className="ml-3 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-lg text-[11px] font-bold shrink-0 transition-colors"
+                  >
+                    Ganti Password Sekarang
+                  </button>
+                </div>
+              )}
 
               {/* Master Navigation: Produk vs FAQ */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">

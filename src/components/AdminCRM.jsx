@@ -80,12 +80,27 @@ export default function AdminCRM({
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
-  // Login handler
+  // Anti Brute-Force Rate Limiting State
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    return parseInt(sessionStorage.getItem('ardistore_login_fails') || '0', 10);
+  });
+  const [lockoutTime, setLockoutTime] = useState(() => {
+    return parseInt(sessionStorage.getItem('ardistore_login_lockout') || '0', 10);
+  });
+
+  // Login handler with Anti-Brute Force Protection
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
-    setAuthLoading(true);
 
+    // Check if currently locked out
+    if (lockoutTime > Date.now()) {
+      const remainingSeconds = Math.ceil((lockoutTime - Date.now()) / 1000);
+      setAuthError(`🛡️ Terlalu banyak percobaan salah! Akun terkunci sementara demi keamanan. Coba lagi dalam ${remainingSeconds} detik.`);
+      return;
+    }
+
+    setAuthLoading(true);
     const supabase = getSupabaseClient();
     
     // 1. If Supabase is connected, attempt Supabase Auth
@@ -99,6 +114,9 @@ export default function AdminCRM({
         if (!error && data.session) {
           setIsAuthenticated(true);
           sessionStorage.setItem('ardistore_admin_auth', 'true');
+          sessionStorage.removeItem('ardistore_login_fails');
+          sessionStorage.removeItem('ardistore_login_lockout');
+          setFailedAttempts(0);
           setAuthLoading(false);
           return;
         }
@@ -107,7 +125,7 @@ export default function AdminCRM({
       }
     }
 
-    // 2. Local Fallback Credentials (Supports custom password set in settings or .env)
+    // 2. Local Fallback Credentials
     const customPass = localStorage.getItem('ardistore_admin_password') || import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
     const customUser = localStorage.getItem('ardistore_admin_username') || import.meta.env.VITE_ADMIN_USERNAME || 'admin@ardistore.digital';
 
@@ -117,12 +135,28 @@ export default function AdminCRM({
     ) {
       setIsAuthenticated(true);
       sessionStorage.setItem('ardistore_admin_auth', 'true');
+      sessionStorage.removeItem('ardistore_login_fails');
+      sessionStorage.removeItem('ardistore_login_lockout');
+      setFailedAttempts(0);
       setAuthLoading(false);
       return;
     }
 
+    // Handle Login Failure & Increment Counter
+    const newFails = failedAttempts + 1;
+    setFailedAttempts(newFails);
+    sessionStorage.setItem('ardistore_login_fails', newFails.toString());
+
     setAuthLoading(false);
-    setAuthError('Email atau password salah. Silakan periksa kembali kredensial Anda.');
+
+    if (newFails >= 5) {
+      const lockUntil = Date.now() + 5 * 60 * 1000; // 5 minutes lock
+      setLockoutTime(lockUntil);
+      sessionStorage.setItem('ardistore_login_lockout', lockUntil.toString());
+      setAuthError('🛡️ Keamanan Diaktifkan: Terdeteksi 5x kesalahan login. Form login dibekukan selama 5 menit untuk mencegah pembobolan.');
+    } else {
+      setAuthError(`Email atau password salah! (Sisa percobaan: ${5 - newFails}x sebelum akun dikunci)`);
+    }
   };
 
   const handleChangePassword = (e) => {

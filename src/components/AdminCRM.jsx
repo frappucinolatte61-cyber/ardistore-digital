@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { 
   X, Plus, Trash2, Edit3, Save, Database, LogOut, Check, 
   AlertCircle, Sparkles, RefreshCw, Eye, EyeOff, Search, Layers, 
-  HelpCircle, Package, ArrowLeft, KeyRound, Shield
+  HelpCircle, Package, ArrowLeft, KeyRound, Shield, User, Lock, UserCheck
 } from 'lucide-react';
-import { getSupabaseClient } from '../lib/supabaseClient';
+import { 
+  getSupabaseClient, 
+  getAdminCredentials, 
+  updateAdminCredentials, 
+  verifyAdminLogin 
+} from '../lib/supabaseClient';
 import { CATEGORIES } from '../data/defaultProducts';
 
 export default function AdminCRM({ 
@@ -75,10 +80,14 @@ export default function AdminCRM({
     }).format(number);
   };
 
-  // Custom Password Modal State
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [newPasswordInput, setNewPasswordInput] = useState('');
-  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+  // Custom Admin Account Modal State (Username & Password)
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountUsernameInput, setAccountUsernameInput] = useState('');
+  const [accountPasswordInput, setAccountPasswordInput] = useState('');
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [accountSaveStatus, setAccountSaveStatus] = useState('');
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Anti Brute-Force Rate Limiting State
   const [failedAttempts, setFailedAttempts] = useState(() => {
@@ -88,7 +97,7 @@ export default function AdminCRM({
     return parseInt(sessionStorage.getItem('ardistore_login_lockout') || '0', 10);
   });
 
-  // Login handler with Anti-Brute Force Protection
+  // Login handler with Supabase Database & Anti-Brute Force Protection
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -103,7 +112,7 @@ export default function AdminCRM({
     setAuthLoading(true);
     const supabase = getSupabaseClient();
     
-    // 1. If Supabase is connected, attempt Supabase Auth
+    // 1. If Supabase is connected, attempt Supabase Auth first
     if (supabase) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -125,21 +134,20 @@ export default function AdminCRM({
       }
     }
 
-    // 2. Local Fallback Credentials
-    const customPass = localStorage.getItem('ardistore_admin_password') || import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-    const customUser = localStorage.getItem('ardistore_admin_username') || import.meta.env.VITE_ADMIN_USERNAME || 'admin@ardistore.digital';
-
-    if (
-      (loginEmail.toLowerCase() === customUser.toLowerCase() || loginEmail.toLowerCase() === 'admin') &&
-      loginPassword === customPass
-    ) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('ardistore_admin_auth', 'true');
-      sessionStorage.removeItem('ardistore_login_fails');
-      sessionStorage.removeItem('ardistore_login_lockout');
-      setFailedAttempts(0);
-      setAuthLoading(false);
-      return;
+    // 2. Check Database Table (admin_users) & Local Fallback via verifyAdminLogin
+    try {
+      const result = await verifyAdminLogin(loginEmail, loginPassword);
+      if (result.success) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('ardistore_admin_auth', 'true');
+        sessionStorage.removeItem('ardistore_login_fails');
+        sessionStorage.removeItem('ardistore_login_lockout');
+        setFailedAttempts(0);
+        setAuthLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('verifyAdminLogin error:', err);
     }
 
     // Handle Login Failure & Increment Counter
@@ -155,23 +163,68 @@ export default function AdminCRM({
       sessionStorage.setItem('ardistore_login_lockout', lockUntil.toString());
       setAuthError('🛡️ Keamanan Diaktifkan: Terdeteksi 5x kesalahan login. Form login dibekukan selama 5 menit untuk mencegah pembobolan.');
     } else {
-      setAuthError(`Email atau password salah! (Sisa percobaan: ${5 - newFails}x sebelum akun dikunci)`);
+      setAuthError(`Username atau password salah! (Sisa percobaan: ${5 - newFails}x sebelum akun dikunci)`);
     }
   };
 
-  const handleChangePassword = (e) => {
+  // Open modal and pre-fill credentials from Database (admin_users) or localStorage
+  const handleOpenAccountModal = async () => {
+    setShowAccountModal(true);
+    setAccountSaveStatus('');
+    setIsSavingAccount(false);
+
+    const localUser = localStorage.getItem('ardistore_admin_username') || 'admin';
+    const localPass = localStorage.getItem('ardistore_admin_password') || '';
+    setAccountUsernameInput(localUser);
+    setAccountPasswordInput(localPass);
+
+    try {
+      const creds = await getAdminCredentials();
+      if (creds) {
+        if (creds.username) setAccountUsernameInput(creds.username);
+        if (creds.password) setAccountPasswordInput(creds.password);
+      }
+    } catch (err) {
+      console.warn('Failed to load admin credentials:', err);
+    }
+  };
+
+  // Save new username and password to Database (admin_users) and localStorage
+  const handleSaveAdminAccount = async (e) => {
     e.preventDefault();
-    if (!newPasswordInput.trim() || newPasswordInput.trim().length < 6) {
+    const cleanUser = accountUsernameInput.trim();
+    const cleanPass = accountPasswordInput.trim();
+
+    if (!cleanUser) {
+      alert('Username admin tidak boleh kosong!');
+      return;
+    }
+    if (!cleanPass || cleanPass.length < 6) {
       alert('Password baru minimal 6 karakter!');
       return;
     }
-    localStorage.setItem('ardistore_admin_password', newPasswordInput.trim());
-    setPasswordChangeSuccess('Password admin berhasil diubah dan disimpan dengan aman!');
-    setNewPasswordInput('');
-    setTimeout(() => {
-      setPasswordChangeSuccess('');
-      setShowPasswordModal(false);
-    }, 2000);
+
+    setIsSavingAccount(true);
+    setAccountSaveStatus('');
+
+    try {
+      const res = await updateAdminCredentials(cleanUser, cleanPass);
+      setIsSavingAccount(false);
+
+      if (res.savedToCloud) {
+        setAccountSaveStatus('✅ Berhasil! Username & Password tersimpan ke Database Cloud Supabase & Browser.');
+      } else {
+        setAccountSaveStatus('✅ Berhasil! Tersimpan ke Browser Lokal (Database Cloud offline).');
+      }
+
+      setTimeout(() => {
+        setAccountSaveStatus('');
+        setShowAccountModal(false);
+      }, 2000);
+    } catch (err) {
+      setIsSavingAccount(false);
+      alert('Gagal menyimpan kredensial: ' + (err.message || 'Error'));
+    }
   };
 
   const handleLogout = async () => {
@@ -358,14 +411,14 @@ export default function AdminCRM({
                 <form onSubmit={handleLogin} className="space-y-4 text-left">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Email / Akun:
+                      Username / Email Admin:
                     </label>
                     <input
                       type="text"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="admin@ardistore.digital"
-                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-cyan-400"
+                      placeholder="admin atau email Anda..."
+                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-cyan-400 font-medium"
                       required
                     />
                   </div>
@@ -374,14 +427,24 @@ export default function AdminCRM({
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
                       Password:
                     </label>
-                    <input
-                      type="password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-cyan-400"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showLoginPassword ? "text" : "password"}
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3.5 py-2.5 pr-10 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-cyan-400 font-mono"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        title={showLoginPassword ? "Sembunyikan password" : "Lihat password"}
+                      >
+                        {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   {authError && (
@@ -413,18 +476,18 @@ export default function AdminCRM({
             /* AUTHENTICATED ADMIN DASHBOARD */
             <div className="space-y-6">
 
-              {/* Security Alert if still using default password */}
-              {!localStorage.getItem('ardistore_admin_password') && (
+              {/* Security Alert if still using default credentials */}
+              {(!localStorage.getItem('ardistore_admin_password') || localStorage.getItem('ardistore_admin_password') === 'admin123') && (
                 <div className="p-3 bg-amber-950/40 border border-amber-800/80 rounded-xl text-xs text-amber-300 flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
-                    <span>Perhatian: Anda belum mengganti password admin pribadi. Silakan buat password rahasia baru agar aman saat di-deploy.</span>
+                    <span>Perhatian: Akun admin masih menggunakan password default. Silakan atur username &amp; password pribadi Anda agar aman.</span>
                   </div>
                   <button
-                    onClick={() => setShowPasswordModal(true)}
+                    onClick={handleOpenAccountModal}
                     className="ml-3 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-lg text-[11px] font-bold shrink-0 transition-colors"
                   >
-                    Ganti Password Sekarang
+                    Atur Akun Sekarang
                   </button>
                 </div>
               )}
@@ -465,12 +528,12 @@ export default function AdminCRM({
 
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setShowPasswordModal(true)}
+                    onClick={handleOpenAccountModal}
                     className="px-3 py-1.5 rounded-xl text-xs font-medium border bg-slate-800 text-slate-300 border-slate-700 hover:text-white flex items-center space-x-1.5 transition-colors"
-                    title="Ganti Password Login Admin Lokal"
+                    title="Ubah Username & Password Admin (Tersimpan ke Database Supabase)"
                   >
                     <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Ganti Password</span>
+                    <span>Ganti User &amp; Password</span>
                   </button>
 
                   <button
@@ -1033,60 +1096,111 @@ export default function AdminCRM({
 
       </div>
 
-      {/* PASSWORD CHANGE MODAL */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="glass-panel p-6 rounded-2xl border border-slate-700 max-w-sm w-full space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h3 className="font-bold text-white text-sm flex items-center space-x-2">
-                <KeyRound className="w-4 h-4 text-cyan-400" />
-                <span>Ubah Password Admin</span>
-              </h3>
+      {/* PENGATURAN AKUN ADMIN MODAL (USERNAME & PASSWORD) */}
+      {showAccountModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel p-6 rounded-2xl border border-slate-700 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">
+                    Pengaturan Akun Admin
+                  </h3>
+                  <p className="text-[11px] text-cyan-400">
+                    Tersimpan di Cloud Database Supabase
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => setShowPasswordModal(false)}
-                className="text-slate-400 hover:text-white"
+                onClick={() => setShowAccountModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
-              Ubah password lokal admin agar akun Anda aman saat website di-deploy ke Vercel atau hosting publik.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Ubah <strong>Username</strong> dan <strong>Password</strong> login admin Anda. Perubahan akan langsung disimpan ke database cloud Supabase sehingga Anda bisa gonta-ganti akun dengan mudah dan login dari perangkat mana saja.
             </p>
 
-            <form onSubmit={handleChangePassword} className="space-y-3">
+            <form onSubmit={handleSaveAdminAccount} className="space-y-3.5 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Password Baru (Min 6 Karakter):
+                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center space-x-1.5">
+                  <User className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Username Admin Baru:</span>
                 </label>
                 <input
-                  type="password"
-                  value={newPasswordInput}
-                  onChange={(e) => setNewPasswordInput(e.target.value)}
-                  placeholder="Masukkan password baru Anda..."
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-400"
+                  type="text"
+                  value={accountUsernameInput}
+                  onChange={(e) => setAccountUsernameInput(e.target.value)}
+                  placeholder="Contoh: admin, ardistore, atau email..."
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-400 font-medium"
                   required
                 />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Bisa nama panggilan atau format email.
+                </span>
               </div>
 
-              {passwordChangeSuccess && (
-                <div className="p-2.5 bg-emerald-950/60 border border-emerald-800 rounded-lg text-xs text-emerald-300 flex items-center space-x-1.5">
-                  <Check className="w-4 h-4 shrink-0" />
-                  <span>{passwordChangeSuccess}</span>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center space-x-1.5">
+                  <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Password Baru (Min 6 Karakter):</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showAccountPassword ? "text" : "password"}
+                    value={accountPasswordInput}
+                    onChange={(e) => setAccountPasswordInput(e.target.value)}
+                    placeholder="Masukkan password baru..."
+                    className="w-full px-3 py-2 pr-9 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-400 font-mono"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountPassword(!showAccountPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    {showAccountPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Gunakan kombinasi huruf &amp; angka agar tidak mudah ditebak.
+                </span>
+              </div>
+
+              {accountSaveStatus && (
+                <div className="p-2.5 bg-emerald-950/60 border border-emerald-800 rounded-xl text-xs text-emerald-300 flex items-center space-x-2">
+                  <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>{accountSaveStatus}</span>
                 </div>
               )}
 
               <div className="flex items-center space-x-2 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs shadow-glow-cyan"
+                  disabled={isSavingAccount}
+                  className="flex-1 py-2 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs shadow-glow-cyan flex items-center justify-center space-x-1.5 disabled:opacity-50 transition-all"
                 >
-                  Simpan Password
+                  {isSavingAccount ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan ke Database...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Simpan Perubahan Akun</span>
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowPasswordModal(false)}
-                  className="py-2 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs"
+                  onClick={() => setShowAccountModal(false)}
+                  className="py-2 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs border border-slate-700"
                 >
                   Batal
                 </button>

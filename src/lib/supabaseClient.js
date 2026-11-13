@@ -60,3 +60,119 @@ export const testSupabaseConnection = async (url, anonKey) => {
     return { success: false, message: err.message || 'Gagal tersambung ke Supabase' };
   }
 };
+
+// Admin Credentials Management with Database & Local Fallback
+export const getAdminCredentials = async () => {
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data && data.username && data.password) {
+        return {
+          username: data.username,
+          password: data.password,
+          source: 'supabase',
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to fetch admin credentials from Supabase:', e);
+    }
+  }
+
+  return {
+    username: localStorage.getItem('ardistore_admin_username') || 'admin',
+    password: localStorage.getItem('ardistore_admin_password') || 'admin123',
+    source: 'localStorage',
+  };
+};
+
+export const updateAdminCredentials = async (username, password) => {
+  const cleanUser = (username || '').trim();
+  const cleanPass = (password || '').trim();
+  let savedToCloud = false;
+
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .upsert({
+          id: 'primary-admin',
+          username: cleanUser,
+          password: cleanPass,
+          updated_at: new Date().toISOString()
+        });
+
+      if (!error) {
+        savedToCloud = true;
+      } else {
+        console.warn('Supabase upsert admin_users error:', error);
+      }
+    } catch (err) {
+      console.warn('Error saving admin_users to Supabase:', err);
+    }
+  }
+
+  // Always update local storage
+  localStorage.setItem('ardistore_admin_username', cleanUser);
+  localStorage.setItem('ardistore_admin_password', cleanPass);
+
+  return { success: true, savedToCloud };
+};
+
+export const verifyAdminLogin = async (inputUser, inputPassword) => {
+  const cleanInputUser = (inputUser || '').trim().toLowerCase();
+  const cleanInputPass = inputPassword || '';
+
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { data: dbUsers, error } = await supabase
+        .from('admin_users')
+        .select('*');
+
+      if (!error && Array.isArray(dbUsers) && dbUsers.length > 0) {
+        const matched = dbUsers.find((row) => {
+          const dbUser = (row.username || '').trim().toLowerCase();
+          const isUserMatch = (
+            cleanInputUser === dbUser ||
+            (dbUser.includes('@') && cleanInputUser === dbUser.split('@')[0]) ||
+            (!dbUser.includes('@') && cleanInputUser === `${dbUser}@ardistore.digital`) ||
+            cleanInputUser === 'admin'
+          );
+          return isUserMatch && cleanInputPass === row.password;
+        });
+
+        if (matched) {
+          localStorage.setItem('ardistore_admin_username', matched.username);
+          localStorage.setItem('ardistore_admin_password', matched.password);
+          return { success: true, source: 'supabase', username: matched.username };
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase verifyAdminLogin error:', e);
+    }
+  }
+
+  // Local fallback
+  const localUser = (localStorage.getItem('ardistore_admin_username') || 'admin').trim().toLowerCase();
+  const localPass = localStorage.getItem('ardistore_admin_password') || 'admin123';
+
+  const isLocalMatch = (
+    cleanInputUser === localUser ||
+    (localUser.includes('@') && cleanInputUser === localUser.split('@')[0]) ||
+    (!localUser.includes('@') && cleanInputUser === `${localUser}@ardistore.digital`) ||
+    cleanInputUser === 'admin'
+  );
+
+  if (isLocalMatch && cleanInputPass === localPass) {
+    return { success: true, source: 'localStorage', username: localUser };
+  }
+
+  return { success: false };
+};

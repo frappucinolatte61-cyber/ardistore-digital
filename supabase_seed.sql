@@ -57,3 +57,30 @@ CREATE POLICY "Admins can update faqs" ON public.faqs FOR UPDATE USING (true);
 DROP POLICY IF EXISTS "Admins can delete faqs" ON public.faqs;
 CREATE POLICY "Admins can delete faqs" ON public.faqs FOR DELETE USING (true);
 
+-- 5. Tabel & Izin Akun Admin (Username & Password)
+CREATE TABLE IF NOT EXISTS public.admin_users (
+  id text PRIMARY KEY DEFAULT 'primary-admin',
+  username text NOT NULL DEFAULT 'admin',
+  password text NOT NULL DEFAULT 'admin123',
+  updated_at timestamptz DEFAULT now()
+);
+
+INSERT INTO public.admin_users (id, username, password)
+VALUES ('primary-admin', 'admin', 'admin123')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow select admin_users" ON public.admin_users;
+CREATE POLICY "Allow select admin_users" ON public.admin_users FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow update admin_users" ON public.admin_users;
+CREATE POLICY "Allow update admin_users" ON public.admin_users FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Allow insert admin_users" ON public.admin_users;
+CREATE POLICY "Allow insert admin_users" ON public.admin_users FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow delete admin_users" ON public.admin_users;
+CREATE POLICY "Allow delete admin_users" ON public.admin_users FOR DELETE USING (true);
+
+

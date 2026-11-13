@@ -333,7 +333,7 @@ export default function App() {
                 </div>
                 <h4 className="text-base font-bold text-white mb-2">Kirim ke WhatsApp</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Klik tombol <strong>"Pesan via WA"</strong>. Format pesan sudah otomatis terisi dan siap dikirim ke CS (08980503699).
+                  Klik tombol <strong>"Pesan via WA"</strong>. Format pesan sudah otomatis terisi dan siap dikirim langsung ke Customer Service resmi kami.
                 </p>
               </div>
 
@@ -437,6 +437,7 @@ export default function App() {
         onOpenAdmin={() => setIsAdminOpen(true)}
         onOpenSupabaseConfig={() => setIsSupabaseModalOpen(true)}
         isSupabaseConnected={isSupabaseConnected}
+        onSelectCategory={setActiveCategory}
       />
 
     </div>

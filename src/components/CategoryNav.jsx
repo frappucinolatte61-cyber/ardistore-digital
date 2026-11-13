@@ -21,7 +21,17 @@ export default function CategoryNav({ activeCategory, onSelectCategory, counts }
           return (
             <button
               key={cat.id}
-              onClick={() => onSelectCategory(cat.id)}
+              onClick={() => {
+                onSelectCategory(cat.id);
+                // Smooth scroll to the target category or products section
+                setTimeout(() => {
+                  const targetId = cat.id === 'all' ? 'products-section' : cat.id;
+                  const targetEl = document.getElementById(targetId) || document.getElementById('products-section');
+                  if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 50);
+              }}
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 border ${
                 isActive
                   ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-400 shadow-glow-cyan'

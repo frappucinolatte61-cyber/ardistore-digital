@@ -2,7 +2,19 @@ import React from 'react';
 import { MessageCircle, ShieldCheck, Heart, Lock, Database } from 'lucide-react';
 import { DEFAULT_WHATSAPP } from '../data/defaultProducts';
 
-export default function Footer({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseConnected }) {
+export default function Footer({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseConnected, onSelectCategory }) {
+  const handleCategoryClick = (catId) => {
+    if (onSelectCategory) {
+      onSelectCategory(catId);
+    }
+    setTimeout(() => {
+      const el = document.getElementById(catId) || document.getElementById('products-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  };
+
   return (
     <footer className="mt-20 border-t border-slate-800/80 bg-[#06080e] relative z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -25,21 +37,56 @@ export default function Footer({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseCo
               Platform layanan digital terpercaya spesialis Mobile Legends (Tutor Rank Vs Bot, Script GG, Warlit), Akun Aplikasi Premium resmi, dan Jasa Optimasi Sosial Media.
             </p>
 
-            <div className="flex items-center space-x-2 text-xs text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Transaksi Aman Langsung ke WhatsApp Resmi: <strong className="text-slate-200">08980503699</strong></span>
+            <div className="flex items-center space-x-2 text-xs text-slate-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Transaksi Aman &amp; Terverifikasi via <strong className="text-emerald-400">WhatsApp Resmi CS</strong></span>
             </div>
           </div>
 
-          {/* Kategori Populer */}
+          {/* Kategori Populer (Interactive Navigation) */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider">Kategori Layanan</h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><a href="#mlbb" className="hover:text-cyan-400 transition-colors">Tutor Rank Vs Bot MLBB</a></li>
-              <li><a href="#mlbb" className="hover:text-cyan-400 transition-colors">Script Game Guardian Season</a></li>
-              <li><a href="#premium-app" className="hover:text-cyan-400 transition-colors">Netflix &amp; Canva Premium</a></li>
-              <li><a href="#premium-app" className="hover:text-cyan-400 transition-colors">Spotify &amp; YouTube Premium</a></li>
-              <li><a href="#sosmed" className="hover:text-cyan-400 transition-colors">Followers &amp; Views Sosmed</a></li>
+              <li>
+                <button
+                  onClick={() => handleCategoryClick('mlbb')}
+                  className="hover:text-cyan-400 transition-colors text-left"
+                >
+                  Tutor Rank Vs Bot MLBB
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleCategoryClick('mlbb')}
+                  className="hover:text-cyan-400 transition-colors text-left"
+                >
+                  Script Game Guardian Season
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleCategoryClick('premium-app')}
+                  className="hover:text-purple-400 transition-colors text-left"
+                >
+                  Netflix &amp; Canva Premium
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleCategoryClick('premium-app')}
+                  className="hover:text-purple-400 transition-colors text-left"
+                >
+                  Spotify &amp; YouTube Premium
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleCategoryClick('sosmed')}
+                  className="hover:text-pink-400 transition-colors text-left"
+                >
+                  Followers &amp; Views Sosmed
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -63,15 +110,22 @@ export default function Footer({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseCo
                 className="inline-flex items-center space-x-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>Hubungi Admin WhatsApp (08980503699)</span>
+                <span>Hubungi Admin WhatsApp Resmi</span>
               </a>
             </div>
           </div>
 
         </div>
 
+        {/* Legal Disclaimer for Safe Cloud / Vercel Hosting */}
+        <div className="py-4 border-t border-slate-900/80 text-[11px] text-slate-500 leading-relaxed">
+          <p>
+            <strong className="text-slate-400">Disclaimer:</strong> Ardistore Digital adalah penyedia layanan independen untuk edukasi, konsultasi matchmaking, dan optimasi digital. Semua merek dagang, logo, dan hak cipta (termasuk Mobile Legends, Netflix, Spotify, Canva, TikTok, Instagram, Meta, Shopee, Tokopedia) adalah hak milik masing-masing pemilik resminya.
+          </p>
+        </div>
+
         {/* Bottom Bar & CRM Trigger */}
-        <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p className="text-center sm:text-left">
             &copy; {new Date().getFullYear()} Ardistore Digital. All rights reserved.
           </p>

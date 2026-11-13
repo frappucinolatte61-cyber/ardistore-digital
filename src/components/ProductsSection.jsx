@@ -177,7 +177,8 @@ export default function ProductsSection({
             return (
               <div
                 key={group.id}
-                className="rounded-3xl glass-card border border-slate-800/80 p-5 sm:p-7 relative overflow-hidden transition-all duration-300"
+                id={group.id}
+                className="rounded-3xl glass-card border border-slate-800/80 p-5 sm:p-7 relative overflow-hidden transition-all duration-300 scroll-mt-28"
               >
                 {/* Subtle top banner glow per category */}
                 <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${group.gradient}`} />

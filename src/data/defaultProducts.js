@@ -1,4 +1,4 @@
-export const DEFAULT_WHATSAPP = '628980503699';
+export const DEFAULT_WHATSAPP = import.meta.env.VITE_WHATSAPP_NUMBER || '628980503699';
 
 export const CATEGORIES = [
   { id: 'all', label: 'Semua Layanan', icon: 'Sparkles' },

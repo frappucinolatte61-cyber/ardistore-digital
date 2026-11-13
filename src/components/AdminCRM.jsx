@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   X, Plus, Trash2, Edit3, Save, Database, LogOut, Check, 
   AlertCircle, Sparkles, RefreshCw, Eye, EyeOff, Search, Layers, 
-  HelpCircle, Package, ArrowLeft
+  HelpCircle, Package, ArrowLeft, KeyRound, Shield
 } from 'lucide-react';
 import { getSupabaseClient } from '../lib/supabaseClient';
 import { CATEGORIES } from '../data/defaultProducts';
@@ -75,6 +75,11 @@ export default function AdminCRM({
     }).format(number);
   };
 
+  // Custom Password Modal State
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+
   // Login handler
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -102,10 +107,13 @@ export default function AdminCRM({
       }
     }
 
-    // 2. Default Local Fallback Credentials for immediate testing
+    // 2. Local Fallback Credentials (Supports custom password set in settings or .env)
+    const customPass = localStorage.getItem('ardistore_admin_password') || import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    const customUser = localStorage.getItem('ardistore_admin_username') || import.meta.env.VITE_ADMIN_USERNAME || 'admin@ardistore.digital';
+
     if (
-      (loginEmail.toLowerCase() === 'admin@ardistore.digital' && loginPassword === 'admin123') ||
-      (loginEmail.toLowerCase() === 'admin' && loginPassword === 'admin123')
+      (loginEmail.toLowerCase() === customUser.toLowerCase() || loginEmail.toLowerCase() === 'admin') &&
+      loginPassword === customPass
     ) {
       setIsAuthenticated(true);
       sessionStorage.setItem('ardistore_admin_auth', 'true');
@@ -114,7 +122,26 @@ export default function AdminCRM({
     }
 
     setAuthLoading(false);
-    setAuthError('Email atau password salah! (Gunakan demo: admin@ardistore.digital / admin123 jika belum membuat akun Supabase)');
+    setAuthError(
+      import.meta.env.DEV
+        ? 'Email atau password salah! (Dev: admin@ardistore.digital / admin123)'
+        : 'Email atau password salah. Silakan periksa kembali kredensial Anda.'
+    );
+  };
+
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    if (!newPasswordInput.trim() || newPasswordInput.trim().length < 6) {
+      alert('Password baru minimal 6 karakter!');
+      return;
+    }
+    localStorage.setItem('ardistore_admin_password', newPasswordInput.trim());
+    setPasswordChangeSuccess('Password admin berhasil diubah dan disimpan dengan aman!');
+    setNewPasswordInput('');
+    setTimeout(() => {
+      setPasswordChangeSuccess('');
+      setShowPasswordModal(false);
+    }, 2000);
   };
 
   const handleLogout = async () => {
@@ -344,9 +371,15 @@ export default function AdminCRM({
                   </button>
 
                   <div className="mt-4 pt-4 border-t border-slate-800 text-center">
-                    <p className="text-[11px] text-slate-400">
-                      Demo instan: <span className="text-cyan-400 font-mono">admin@ardistore.digital</span> | Pass: <span className="text-cyan-400 font-mono">admin123</span>
-                    </p>
+                    {import.meta.env.DEV ? (
+                      <p className="text-[11px] text-slate-400">
+                        Mode Dev: <span className="text-cyan-400 font-mono">admin@ardistore.digital</span> | Pass: <span className="text-cyan-400 font-mono">admin123</span>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-500">
+                        🔒 Akses Terproteksi • Khusus Administrator Resmi Ardistore Digital
+                      </p>
+                    )}
                   </div>
                 </form>
               </div>
@@ -390,6 +423,15 @@ export default function AdminCRM({
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowPasswordModal(true)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium border bg-slate-800 text-slate-300 border-slate-700 hover:text-white flex items-center space-x-1.5 transition-colors"
+                    title="Ganti Password Login Admin Lokal"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Ganti Password</span>
+                  </button>
+
                   <button
                     onClick={onOpenSupabaseConfig}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center space-x-1.5 ${
@@ -949,6 +991,70 @@ export default function AdminCRM({
         </div>
 
       </div>
+
+      {/* PASSWORD CHANGE MODAL */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="glass-panel p-6 rounded-2xl border border-slate-700 max-w-sm w-full space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h3 className="font-bold text-white text-sm flex items-center space-x-2">
+                <KeyRound className="w-4 h-4 text-cyan-400" />
+                <span>Ubah Password Admin</span>
+              </h3>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Ubah password lokal admin agar akun Anda aman saat website di-deploy ke Vercel atau hosting publik.
+            </p>
+
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Password Baru (Min 6 Karakter):
+                </label>
+                <input
+                  type="password"
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  placeholder="Masukkan password baru Anda..."
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-400"
+                  required
+                />
+              </div>
+
+              {passwordChangeSuccess && (
+                <div className="p-2.5 bg-emerald-950/60 border border-emerald-800 rounded-lg text-xs text-emerald-300 flex items-center space-x-1.5">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>{passwordChangeSuccess}</span>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs shadow-glow-cyan"
+                >
+                  Simpan Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="py-2 px-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

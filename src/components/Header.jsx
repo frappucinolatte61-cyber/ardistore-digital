@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, MessageCircle, Lock, Sparkles, Terminal } from 'lucide-react';
+import { DEFAULT_WHATSAPP } from '../data/defaultProducts';
 
 export default function Header({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseConnected, productsCount }) {
   return (
@@ -46,7 +47,7 @@ export default function Header({ onOpenAdmin, onOpenSupabaseConfig, isSupabaseCo
 
           {/* Quick link to WhatsApp */}
           <a
-            href="https://wa.me/628980503699?text=Halo%20Admin%20Ardistore%20Digital,%20saya%20mau%20tanya%20layanan%20Anda."
+            href={`https://wa.me/${DEFAULT_WHATSAPP}?text=Halo%20Admin%20Ardistore%20Digital,%20saya%20mau%20tanya%20layanan%20Anda.`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs sm:text-sm shadow-glow-neon transition-all transform active:scale-95"

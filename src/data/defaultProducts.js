@@ -17,6 +17,11 @@ export const INITIAL_PRODUCTS = [
     unit: 'Metode',
     badge: 'Popular',
     image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80',
+    videoUrl: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&auto=format&fit=crop&q=80'
+    ],
     description: 'Panduan dan tutorial khusus cara matchmaking rank bertemu bot 100% winrate hingga tier Mythic 30 bintang.',
     features: [
       'Cocok untuk Mythic awal (bintang 0-30)',
@@ -85,6 +90,11 @@ export const INITIAL_PRODUCTS = [
     unit: '/ Season',
     badge: 'Pro Script',
     image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80',
+    videoUrl: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
+    gallery: [
+      'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80'
+    ],
     description: 'Paket script GG premium terlengkap dengan fitur update berkala selama satu season penuh.',
     features: [
       'Skip Time & One Hit Setting',
@@ -156,6 +166,11 @@ export const INITIAL_PRODUCTS = [
     unit: '/ Bulan',
     badge: 'Best Seller',
     image: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=600&auto=format&fit=crop&q=80',
+    videoUrl: 'https://www.youtube.com/watch?v=GV3HUDMQ-F8',
+    gallery: [
+      'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=600&auto=format&fit=crop&q=80'
+    ],
     description: 'Akun Netflix kualitas 4K Ultra HD. 1 Profil 1 User khusus pin pribadi anti tercampur.',
     features: [
       'Resolusi Ultra HD (4K)',

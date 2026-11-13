@@ -72,6 +72,8 @@ export default function App() {
             unit: item.unit || '',
             badge: item.badge || '',
             image: item.image,
+            videoUrl: item.video_url || item.videoUrl || '',
+            gallery: Array.isArray(item.gallery) ? item.gallery : (item.gallery ? [item.gallery] : []),
             description: item.description,
             features: Array.isArray(item.features) ? item.features : [],
             isActive: item.is_active !== false,
@@ -154,7 +156,8 @@ export default function App() {
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
-        await supabase.from('products').upsert({
+        // Attempt full payload with video_url and gallery
+        const { error } = await supabase.from('products').upsert({
           id: productData.id,
           name: productData.name,
           category: productData.category,
@@ -162,10 +165,29 @@ export default function App() {
           unit: productData.unit,
           badge: productData.badge,
           image: productData.image,
+          video_url: productData.videoUrl || '',
+          gallery: productData.gallery || [],
           description: productData.description,
           features: productData.features,
           is_active: productData.isActive,
         });
+
+        // If columns don't exist yet in Supabase schema (PGRST204), fallback to standard columns
+        if (error && error.code === 'PGRST204') {
+          console.warn('Columns video_url/gallery not in Supabase yet, saving standard columns');
+          await supabase.from('products').upsert({
+            id: productData.id,
+            name: productData.name,
+            category: productData.category,
+            price: productData.price,
+            unit: productData.unit,
+            badge: productData.badge,
+            image: productData.image,
+            description: productData.description,
+            features: productData.features,
+            is_active: productData.isActive,
+          });
+        }
       } catch (e) {
         console.error('Error syncing product to Supabase:', e);
       }

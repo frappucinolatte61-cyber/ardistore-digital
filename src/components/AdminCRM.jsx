@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   X, Plus, Trash2, Edit3, Save, Database, LogOut, Check, 
   AlertCircle, Sparkles, RefreshCw, Eye, EyeOff, Search, Layers, 
-  HelpCircle, Package, ArrowLeft, KeyRound, Shield, User, Lock, UserCheck
+  HelpCircle, Package, ArrowLeft, KeyRound, Shield, User, Lock, UserCheck,
+  Play, Video, Camera
 } from 'lucide-react';
 import { 
   getSupabaseClient, 
@@ -58,6 +59,8 @@ export default function AdminCRM({
     unit: '',
     badge: '',
     image: '',
+    videoUrl: '',
+    galleryText: '',
     description: '',
     featuresText: '',
     isActive: true,
@@ -250,6 +253,8 @@ export default function AdminCRM({
       unit: '',
       badge: '',
       image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80',
+      videoUrl: '',
+      galleryText: '',
       description: '',
       featuresText: 'Proses Cepat 5-10 Menit\n100% Bergaransi\nPelayanan Ramah 24 Jam',
       isActive: true,
@@ -266,6 +271,8 @@ export default function AdminCRM({
       unit: prod.unit || '',
       badge: prod.badge || '',
       image: prod.image || '',
+      videoUrl: prod.videoUrl || prod.video_url || '',
+      galleryText: Array.isArray(prod.gallery) ? prod.gallery.join('\n') : (prod.gallery || ''),
       description: prod.description || '',
       featuresText: (prod.features || []).join('\n'),
       isActive: prod.isActive !== false,
@@ -282,6 +289,11 @@ export default function AdminCRM({
       .map(line => line.trim())
       .filter(line => line.length > 0);
 
+    const galleryArray = productFormData.galleryText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && (line.startsWith('http://') || line.startsWith('https://') || line.startsWith('/')));
+
     const productPayload = {
       id: editingProductId || `prod-${Date.now()}`,
       name: productFormData.name.trim(),
@@ -290,6 +302,8 @@ export default function AdminCRM({
       unit: productFormData.unit.trim(),
       badge: productFormData.badge.trim(),
       image: productFormData.image.trim() || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+      videoUrl: productFormData.videoUrl.trim(),
+      gallery: galleryArray,
       description: productFormData.description.trim(),
       features: featuresArray,
       isActive: productFormData.isActive,
@@ -652,7 +666,19 @@ export default function AdminCRM({
                                         />
                                         <div>
                                           <p className="font-bold text-white line-clamp-1">{prod.name}</p>
-                                          <p className="text-[11px] text-slate-400 line-clamp-1">{prod.description}</p>
+                                          <div className="flex items-center space-x-2 mt-0.5">
+                                            <p className="text-[11px] text-slate-400 line-clamp-1">{prod.description}</p>
+                                            {(prod.videoUrl || prod.video_url) && (
+                                              <span className="shrink-0 text-[10px] text-rose-400 flex items-center gap-0.5 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-900/60 font-semibold">
+                                                <Play className="w-2.5 h-2.5 fill-rose-400" /> Video
+                                              </span>
+                                            )}
+                                            {Array.isArray(prod.gallery) && prod.gallery.length > 0 && (
+                                              <span className="shrink-0 text-[10px] text-cyan-400 flex items-center gap-0.5 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-900/60 font-semibold">
+                                                <Camera className="w-2.5 h-2.5" /> +{prod.gallery.length}
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
                                     </td>
@@ -820,8 +846,9 @@ export default function AdminCRM({
                         </div>
 
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">
-                            URL Gambar / Foto Produk:
+                          <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                            <span>URL Gambar Utama (Cover/Thumbnail):</span>
+                            <span className="text-[10px] text-cyan-400">Wajib diisi</span>
                           </label>
                           <div className="flex gap-2">
                             <input
@@ -837,6 +864,48 @@ export default function AdminCRM({
                               </div>
                             )}
                           </div>
+                        </div>
+
+                        {/* NEW: Video URL Field */}
+                        <div className="p-3.5 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
+                          <label className="block text-xs font-semibold text-slate-200 flex items-center justify-between">
+                            <span className="flex items-center space-x-1.5">
+                              <Play className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
+                              <span>Link Video Demo / Tutorial (Opsional):</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-normal">YouTube / Shorts / MP4</span>
+                          </label>
+                          <input
+                            type="url"
+                            value={productFormData.videoUrl}
+                            onChange={(e) => setProductFormData({ ...productFormData, videoUrl: e.target.value })}
+                            placeholder="Contoh: https://www.youtube.com/watch?v=... atau https://youtu.be/..."
+                            className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                          />
+                          <p className="text-[11px] text-slate-400">
+                            Video akan langsung diputar saat calon pembeli membuka rincian produk. Mendukung link YouTube reguler, YouTube Shorts, link MP4 langsung, dan Google Drive preview.
+                          </p>
+                        </div>
+
+                        {/* NEW: Extra Gallery Images */}
+                        <div className="p-3.5 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
+                          <label className="block text-xs font-semibold text-slate-200 flex items-center justify-between">
+                            <span className="flex items-center space-x-1.5">
+                              <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Galeri Foto Tambahan (Opsional):</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-normal">1 baris = 1 URL foto</span>
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={productFormData.galleryText}
+                            onChange={(e) => setProductFormData({ ...productFormData, galleryText: e.target.value })}
+                            placeholder="https://images.unsplash.com/photo-1...&#10;https://images.unsplash.com/photo-2..."
+                            className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-cyan-400 font-mono"
+                          />
+                          <p className="text-[11px] text-slate-400">
+                            Foto tambahan akan ditampilkan dalam bentuk galeri slider / thumbnail di samping foto utama.
+                          </p>
                         </div>
 
                         <div>

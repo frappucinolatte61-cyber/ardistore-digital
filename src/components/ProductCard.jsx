@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, Check, Sparkles, Tag } from 'lucide-react';
+import { MessageCircle, Check, Sparkles, Play, Camera } from 'lucide-react';
 import { DEFAULT_WHATSAPP } from '../data/defaultProducts';
 
 export default function ProductCard({ product, onSelectForCheckout }) {
@@ -26,21 +26,28 @@ export default function ProductCard({ product, onSelectForCheckout }) {
   const getCategoryColor = (cat) => {
     switch (cat) {
       case 'mlbb':
-        return 'text-cyan-400 bg-cyan-950/50 border-cyan-800/60';
+        return 'text-cyan-400 bg-cyan-950/70 border-cyan-800/80';
       case 'premium-app':
-        return 'text-purple-400 bg-purple-950/50 border-purple-800/60';
+        return 'text-purple-400 bg-purple-950/70 border-purple-800/80';
       case 'sosmed':
-        return 'text-pink-400 bg-pink-950/50 border-pink-800/60';
+        return 'text-pink-400 bg-pink-950/70 border-pink-800/80';
       default:
-        return 'text-blue-400 bg-blue-950/50 border-blue-800/60';
+        return 'text-blue-400 bg-blue-950/70 border-blue-800/80';
     }
   };
+
+  const hasVideo = Boolean(product.videoUrl || product.video_url);
+  const galleryCount = Array.isArray(product.gallery) ? product.gallery.length : 0;
 
   return (
     <div className="group glass-card rounded-2xl overflow-hidden flex flex-col justify-between border border-slate-800/90 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-glow-cyan hover:-translate-y-1">
       <div>
-        {/* Product Image & Badges */}
-        <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+        {/* Product Image & Badges (Clickable to open Detail/Video) */}
+        <div 
+          onClick={() => onSelectForCheckout(product)}
+          className="relative aspect-video w-full overflow-hidden bg-slate-900 cursor-pointer"
+          title="Klik untuk melihat detail & media preview"
+        >
           <img
             src={product.image || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80'}
             alt={product.name}
@@ -53,27 +60,50 @@ export default function ProductCard({ product, onSelectForCheckout }) {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d14] via-transparent to-transparent opacity-80" />
 
-          {/* Badge */}
-          {product.badge && (
-            <div className="absolute top-3 left-3">
+          {/* Top Left: Badges */}
+          <div className="absolute top-3 left-3 flex flex-col space-y-1.5 items-start">
+            {product.badge && (
               <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-500 text-black shadow-lg">
                 <Sparkles className="w-3 h-3" />
                 <span>{product.badge}</span>
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Category Tag */}
-          <div className="absolute top-3 right-3">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider ${getCategoryColor(product.category)}`}>
+          {/* Top Right: Category & Media Indicators */}
+          <div className="absolute top-3 right-3 flex items-center space-x-1.5">
+            {hasVideo && (
+              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600 text-white shadow-md">
+                <Play className="w-2.5 h-2.5 fill-white" />
+                <span>Video</span>
+              </span>
+            )}
+            {galleryCount > 0 && (
+              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 backdrop-blur-md text-cyan-300 border border-cyan-500/40">
+                <Camera className="w-2.5 h-2.5" />
+                <span>+{galleryCount}</span>
+              </span>
+            )}
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider backdrop-blur-md ${getCategoryColor(product.category)}`}>
               {product.category === 'mlbb' ? 'MLBB' : product.category === 'premium-app' ? 'App Pro' : 'Sosmed'}
+            </span>
+          </div>
+
+          {/* Hover Play / View Overlay */}
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <span className="px-3 py-1.5 rounded-xl bg-cyan-500/90 text-black text-xs font-bold flex items-center space-x-1.5 shadow-glow-cyan transform translate-y-2 group-hover:translate-y-0 transition-transform">
+              {hasVideo ? <Play className="w-3.5 h-3.5 fill-black" /> : <Camera className="w-3.5 h-3.5" />}
+              <span>Lihat Detail &amp; Media</span>
             </span>
           </div>
         </div>
 
         {/* Product Info */}
         <div className="p-5">
-          <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors line-clamp-2">
+          <h3 
+            onClick={() => onSelectForCheckout(product)}
+            className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors line-clamp-2 cursor-pointer"
+          >
             {product.name}
           </h3>
 
@@ -114,9 +144,10 @@ export default function ProductCard({ product, onSelectForCheckout }) {
       <div className="p-5 pt-0 grid grid-cols-5 gap-2">
         <button
           onClick={() => onSelectForCheckout(product)}
-          className="col-span-2 py-2.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700/80 transition-all text-center"
+          className="col-span-2 py-2.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700/80 transition-all text-center flex items-center justify-center space-x-1 hover:text-white"
         >
-          Detail / Opsi
+          {hasVideo ? <Play className="w-3 h-3 text-rose-400 fill-rose-400" /> : null}
+          <span>Detail &amp; Opsi</span>
         </button>
 
         <a
